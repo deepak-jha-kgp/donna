@@ -97,6 +97,22 @@ except Exception: print(-1)' 2>/dev/null || echo -1)"
   done
 done
 
+# A fresh organization has no auth config for Gmail, and a connect request against a
+# connector nobody has installed comes back `404 CONNECTOR_NOT_FOUND` -- which
+# reads like the platform does not support it. It does. `auth-configs create`
+# installs the platform's own OAuth app (SYSTEM_DEFAULT: no client id, no secret,
+# nobody types anything), and the very same request then returns a real
+# authorization URL. Somebody lost a setup to that 404, so try, install, retry.
+gmail_authorize() {
+  local out
+  out="$(lemma connectors connect-requests create gmail --output json 2>/dev/null || true)"
+  if ! printf '%s' "$out" | grep -q authorization_url; then
+    lemma connectors auth-configs create gmail >/dev/null 2>&1 || true
+    out="$(lemma connectors connect-requests create gmail --output json 2>/dev/null || true)"
+  fi
+  printf '%s' "$out"
+}
+
 # 4. Read back what landed. All of these are independent, so they go at once
 #    rather than one after another -- four round trips in the time of the slowest.
 D="$(mktemp -d)"
@@ -145,9 +161,9 @@ if [ "$GMAIL" = "connected" ]; then
   STEP2="  Say the word and she starts reading it."
 else
   STEP="  Connect a mailbox — nothing works until you do:"
-  STEP2="  $(lemma connectors connect-requests create gmail --output json 2>/dev/null \
-        | python3 -c 'import json,sys; print(json.load(sys.stdin).get("authorization_url") or "(no authorization url — set gmail up on the connectors page)")' 2>/dev/null \
-        || echo '(could not start a gmail connect request — set it up on the connectors page)')"
+  STEP2="  $(gmail_authorize | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("authorization_url") or "(no authorization url — set gmail up on the connectors page)")
+except Exception: print("(could not start a gmail connect request — set it up on the connectors page)")' 2>/dev/null)"
 fi
 
 cat <<TXT
