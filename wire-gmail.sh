@@ -52,7 +52,7 @@ else
   python3 -c '
 import json, sys
 print(json.dumps({"account_id": sys.argv[1], "email": sys.argv[2], "provider": "gmail",
-                  "is_active": True, "onboarding_state": "connected"}))
+                  "is_active": True, "onboarding_state": "configure"}))
 ' "$ACCOUNT" "$EMAIL" >"$TMP/row.json"
   lemma records create mailbox --file "$TMP/row.json" >/dev/null
   echo "registered."
