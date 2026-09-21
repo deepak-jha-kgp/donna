@@ -73,6 +73,30 @@ if ! lemma pods import . --set-pod-meta --with-files --var "cos_app_slug=$SLUG" 
   fi
 fi
 
+# The importer applies grants LAST -- after schedules, after surfaces, after
+# files. Anything that fails in between takes them with it and leaves workloads
+# granted nothing at all: an import that printed "created" for every resource
+# and a pod that cannot do a single thing. That is not hypothetical; it happened
+# on a pod whose own email surface was named slightly differently from this
+# bundle's, and it cost somebody six minutes of reading CLI source to work out
+# why. So read the grants back, and put them back from the bundle if they are
+# missing. `--from-bundle` exists for exactly this.
+for kind in agents functions; do
+  [ -d "$kind" ] || continue
+  for dir in "$kind"/*/; do
+    [ -d "$dir" ] || continue
+    name="$(basename "$dir")"
+    have="$(lemma "$kind" permissions get "$name" --output json 2>/dev/null \
+      | python3 -c 'import json,sys
+try: print(len(json.load(sys.stdin).get("grants") or []))
+except Exception: print(-1)' 2>/dev/null || echo -1)"
+    if [ "$have" = "0" ]; then
+      echo "note: $name imported with no grants — restoring them from the bundle" >&2
+      lemma "$kind" permissions replace "$name" --from-bundle "$dir" >/dev/null 2>&1 || true
+    fi
+  done
+done
+
 # 4. Read back what landed. All of these are independent, so they go at once
 #    rather than one after another -- four round trips in the time of the slowest.
 D="$(mktemp -d)"
