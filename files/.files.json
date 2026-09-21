@@ -41,6 +41,24 @@
       "path": "/memory/agents/ledger/runs.md",
       "search_enabled": true,
       "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/samples/newspaper.png",
+      "search_enabled": false,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/samples/newspaper.pdf",
+      "search_enabled": false,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/samples/newspaper.html",
+      "search_enabled": false,
+      "visibility": "POD"
     }
   ]
 }

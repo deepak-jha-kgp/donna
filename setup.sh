@@ -20,11 +20,6 @@ export LEMMA_POD_ID
 #    and pod names are unique per organization: a second `donna` in the same org
 #    is a 409 that would take the whole import down with it.
 META="$(mktemp -d)"; trap 'rm -rf "$META"' EXIT
-cp pod.json "$META/"
-if ! lemma pods import "$META" --set-pod-meta >/dev/null 2>&1; then
-  echo "note: could not name this pod 'donna' — something else in this" >&2
-  echo "      organization already is. Carrying on; nothing depends on it." >&2
-fi
 
 # 2. Whose mail this is. The pod's own rules open by naming an owner, and a pod
 #    that inherits somebody else's is worse than one that admits it has none, so
@@ -62,45 +57,72 @@ PY
 SLUG="cos-app-$(printf '%s' "${LEMMA_POD_ID//-/}" | tail -c 12)"
 LOG="$(mktemp)"
 echo "setting up — about fifteen seconds"
-if ! lemma pods import . --with-files --var "cos_app_slug=$SLUG" >"$LOG" 2>&1; then
-  echo "the import failed. Full output:" >&2
-  cat "$LOG" >&2
-  exit 1
+# One call when the pod's name is free. `--set-pod-meta` applies metadata before
+# any resource, so the email surfaces are created already carrying the new name --
+# and if the name is taken it is a 409 that aborts in seconds, before anything
+# exists, which is why the fallback is a plain re-import rather than a repair.
+if ! lemma pods import . --set-pod-meta --with-files --var "cos_app_slug=$SLUG" >"$LOG" 2>&1; then
+  if grep -q 'POD_CONFLICT' "$LOG"; then
+    echo "note: could not name this pod 'donna' — something else in this" >&2
+    echo "      organization already is. Importing without the rename." >&2
+    if ! lemma pods import . --with-files --var "cos_app_slug=$SLUG" >"$LOG" 2>&1; then
+      echo "the import failed. Full output:" >&2; cat "$LOG" >&2; exit 1
+    fi
+  else
+    echo "the import failed. Full output:" >&2; cat "$LOG" >&2; exit 1
+  fi
 fi
 
-# 4. Read back what landed.
-APP_URL="$(lemma apps get cos-app --output json | python3 -c 'import json,sys; print(json.load(sys.stdin).get("url") or "")')"
-MAIL="$(lemma surfaces list --output json | python3 -c '
+# 4. Read back what landed. All of these are independent, so they go at once
+#    rather than one after another -- four round trips in the time of the slowest.
+D="$(mktemp -d)"
+lemma apps get cos-app --output json      >"$D/app"  2>/dev/null &
+lemma surfaces list --output json         >"$D/surf" 2>/dev/null &
+lemma files ls /memory --json             >"$D/mem"  2>/dev/null &
+lemma connectors accounts list --output json >"$D/acc" 2>/dev/null &
+wait
+
+APP_URL="$(python3 -c '
 import json, sys
-d = json.load(sys.stdin)
-for s in (d["items"] if isinstance(d, dict) else d):
-    if s["name"] == "resend-assistant":
-        print((s.get("reach") or {}).get("email") or "-"); break
-else: print("-")
-')"
-BRAINS="$(lemma files ls /memory --json 2>/dev/null | python3 -c '
-import json, sys
-try: print(len([r for r in json.load(sys.stdin)["items"] if r.get("kind") == "FILE"]))
-except Exception: print("?")
-')"
-GMAIL="$(lemma connectors accounts list --output json 2>/dev/null | python3 -c '
+try: print(json.load(open(sys.argv[1])).get("url") or "")
+except Exception: print("")
+' "$D/app")"
+MAIL="$(python3 -c '
 import json, sys
 try:
-    d = json.load(sys.stdin)
+    d = json.load(open(sys.argv[1]))
+    for s in (d["items"] if isinstance(d, dict) else d):
+        if s["name"] == "resend-assistant":
+            print((s.get("reach") or {}).get("email") or "-"); break
+    else: print("-")
+except Exception: print("-")
+' "$D/surf")"
+BRAINS="$(python3 -c '
+import json, sys
+try: print(len([r for r in json.load(open(sys.argv[1]))["items"] if r.get("kind") == "FILE"]))
+except Exception: print("?")
+' "$D/mem")"
+GMAIL="$(python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
     rows = d["items"] if isinstance(d, dict) else d
     print("connected" if [a for a in rows
           if a.get("connector_id") == "gmail" and a.get("status") == "CONNECTED"] else "none")
 except Exception: print("none")
-')"
+' "$D/acc")"
+rm -rf "$D"
+
+# A command has no business in the message a person reads. When a mailbox is
+# already connected they get a question; the command that answers it is in the
+# frame above, addressed to the agent.
 if [ "$GMAIL" = "connected" ]; then
-  # A command has no business in the message a person reads. What they get is a
-  # question; the command that answers it is in the frame above, for the agent.
   STEP="  A mailbox is already connected here, so there is nothing for you to set up."
   STEP2="  Say the word and she starts reading it."
 else
   STEP="  Connect a mailbox — nothing works until you do:"
   STEP2="  $(lemma connectors connect-requests create gmail --output json 2>/dev/null \
-        | python3 -c 'import json,sys; print(json.load(sys.stdin).get("authorization_url") or "(no authorization url came back — set gmail up on the connectors page)")' 2>/dev/null \
+        | python3 -c 'import json,sys; print(json.load(sys.stdin).get("authorization_url") or "(no authorization url — set gmail up on the connectors page)")' 2>/dev/null \
         || echo '(could not start a gmail connect request — set it up on the connectors page)')"
 fi
 
@@ -117,6 +139,9 @@ cat <<TXT
  When they answer, YOU do the thing — never hand them a command:
    gmail already connected   -> ./wire-gmail.sh registers it as this pod's mailbox.
                                 It reads nothing; the sync is a separate yes.
+   anybody waiting on a sync -> show /samples/newspaper.png while it runs. It is a
+                               full edition on invented correspondence; say that as
+                               you show it, never as a preview of their inbox.
    they want their mail read -> ./wire-gmail.sh, then gmail_sync. Read
                                 /memory/conventions.md first: tier='corpus' is
                                 real correspondence, index_only is bulk mail and
@@ -141,6 +166,9 @@ $STEP
 $STEP2
 
   Then: show me what's waiting on me
+
+  She will show you a sample edition first — invented correspondence, clearly marked —
+  so you can see the paper before there is any of your own mail in it.
 
   There is a desk at
   $APP_URL
