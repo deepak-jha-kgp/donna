@@ -6,7 +6,6 @@
   "instruction": {
     "$file": "instruction.md"
   },
-  "kind": "USER",
   "metadata": null,
   "name": "ledger",
   "output_schema": null,
