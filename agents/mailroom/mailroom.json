@@ -1,0 +1,86 @@
+{
+  "agent_runtime": null,
+  "description": "Unattended inbox worker: syncs mail, triages threads, and writes drafts a person approves. Never sends, never asks.",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "kind": "USER",
+  "metadata": null,
+  "name": "mailroom",
+  "output_schema": null,
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "email_thread",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "standing_instruction",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "sync_cursor",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "email_message",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "draft",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "mailbox",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "folder.write"
+        ],
+        "resource_name": "/memory",
+        "resource_type": "folder"
+      },
+      {
+        "permission_ids": [
+          "function.execute"
+        ],
+        "resource_name": "gmail_sync",
+        "resource_type": "function"
+      }
+    ]
+  },
+  "toolsets": [
+    "MEMORY"
+  ],
+  "visibility": "POD"
+}

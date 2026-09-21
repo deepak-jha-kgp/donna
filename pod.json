@@ -1,0 +1,17 @@
+{
+  "contents": {
+    "with_files": true
+  },
+  "description": "Your chief of staff: reads your mail, drafts your replies, tracks who is waiting on you, and hands you one briefing a morning.",
+  "format_version": 3,
+  "icon_url": null,
+  "name": "chief-of-staff",
+  "variables": {
+    "cos_app_slug": {
+      "default": "cos-app",
+      "description": "Public URL slug for app 'cos-app' (unique platform-wide; a suffix is added on collision)",
+      "source_value": "cos-app",
+      "type": "app_slug"
+    }
+  }
+}

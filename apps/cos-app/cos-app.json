@@ -1,0 +1,6 @@
+{
+  "description": null,
+  "name": "cos-app",
+  "public_slug": "${cos_app_slug}",
+  "visibility": "PUBLIC"
+}

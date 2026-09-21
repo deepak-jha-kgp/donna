@@ -1,0 +1,17 @@
+{
+  "account_id": null,
+  "agent_name": "chronicler",
+  "config": {
+    "cron": "30 6 * * *",
+    "timezone": "Asia/Kolkata"
+  },
+  "connector_trigger_id": null,
+  "filter_instruction": null,
+  "filter_output_schema": null,
+  "instruction": "Produce today's paper for the active mailbox. Follow your run order: refresh people, sweep against ACTIVE interests only, assemble with build_edition, render the PDF, and deliver it attached with the numbered items in the same reply. If no interests are active yet, say so in the lede and keep the world section short rather than guessing.",
+  "is_active": true,
+  "name": "morning-paper",
+  "schedule_type": "TIME",
+  "visibility": "PERSONAL",
+  "workflow_name": null
+}

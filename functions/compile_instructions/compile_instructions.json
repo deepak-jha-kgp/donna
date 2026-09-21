@@ -1,0 +1,23 @@
+{
+  "code": {
+    "$file": "code.py"
+  },
+  "config": null,
+  "description": "Compile active standing instructions into /me/cos/<scope>.md and the auto-injected /me/AGENTS.md preamble, reporting when the preamble exceeds the runtime's per-scope cap.",
+  "icon_url": null,
+  "name": "compile_instructions",
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "standing_instruction",
+        "resource_type": "datastore_table"
+      }
+    ]
+  },
+  "type": "API",
+  "visibility": "POD"
+}

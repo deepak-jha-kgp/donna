@@ -1,0 +1,62 @@
+{
+  "agent_runtime": null,
+  "description": "Extracts and closes commitments \u2014 what you promised, what you are owed \u2014 from real correspondence, with the sentence that made each one.",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "kind": "USER",
+  "metadata": null,
+  "name": "ledger",
+  "output_schema": null,
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "email_thread",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "email_message",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "person",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "commitment",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "folder.write"
+        ],
+        "resource_name": "/memory",
+        "resource_type": "folder"
+      }
+    ]
+  },
+  "toolsets": [
+    "MEMORY"
+  ],
+  "visibility": "POD"
+}

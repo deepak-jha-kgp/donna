@@ -1,0 +1,138 @@
+{
+  "agent_runtime": null,
+  "description": "Builds and delivers the morning paper: refreshes people, sweeps the web against confirmed interests, assembles a numbered edition, renders it to PDF and attaches it.",
+  "icon_url": null,
+  "input_schema": null,
+  "instruction": {
+    "$file": "instruction.md"
+  },
+  "kind": "USER",
+  "metadata": null,
+  "name": "chronicler",
+  "output_schema": null,
+  "permissions": {
+    "grants": [
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "email_thread",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "email_message",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "draft",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "mailbox",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "edition",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "interest",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "person",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "source",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "story",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.record.write",
+          "datastore.table.read"
+        ],
+        "resource_name": "edition_item",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "datastore.record.read",
+          "datastore.table.read"
+        ],
+        "resource_name": "commitment",
+        "resource_type": "datastore_table"
+      },
+      {
+        "permission_ids": [
+          "folder.write"
+        ],
+        "resource_name": "/memory",
+        "resource_type": "folder"
+      },
+      {
+        "permission_ids": [
+          "function.execute"
+        ],
+        "resource_name": "derive_people",
+        "resource_type": "function"
+      },
+      {
+        "permission_ids": [
+          "function.execute"
+        ],
+        "resource_name": "build_edition",
+        "resource_type": "function"
+      }
+    ]
+  },
+  "toolsets": [
+    "WEB_SEARCH",
+    "WORKSPACE_CLI",
+    "MEMORY"
+  ],
+  "visibility": "POD"
+}

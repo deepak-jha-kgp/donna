@@ -1,0 +1,17 @@
+{
+  "account_id": null,
+  "agent_name": "ledger",
+  "config": {
+    "cron": "0 1 * * *",
+    "timezone": "Asia/Kolkata"
+  },
+  "connector_trigger_id": null,
+  "filter_instruction": null,
+  "filter_output_schema": null,
+  "instruction": "Work the corpus threads whose last message arrived since your previous run (fall back to the 25 most recent if you cannot tell). First close or drop any open commitment that a newer message has settled, then extract new ones. Record nothing below 0.6 confidence.",
+  "is_active": true,
+  "name": "nightly-ledger",
+  "schedule_type": "TIME",
+  "visibility": "PERSONAL",
+  "workflow_name": null
+}

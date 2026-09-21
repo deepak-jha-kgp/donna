@@ -1,0 +1,477 @@
+/* Chief of staff — a mail client, not a document about mail.
+ *
+ * Three panes: rail, list, reader. The list and the reader sit side by side so
+ * j/k walks the queue and the reader follows — that adjacency IS the triage
+ * loop, and losing it (a list that navigates away to a page) is what made the
+ * first build read as a website about email.
+ *
+ * Identity stays the desk: warm ground, ink text, a ledger's monospace for
+ * metadata, serif for what a person actually wrote, and an editor's red pencil
+ * spent only on what needs you. See DESIGN.md.
+ */
+
+:root {
+  /* One definition per token. `light-dark()` resolves against the element's
+     `color-scheme`, so the switcher only has to change that one property — no
+     duplicated palette block to drift out of sync. */
+  color-scheme: light dark;
+
+  --paper:       light-dark(#f3f0e7, #14130e);
+  --pane:        light-dark(#fdfcf8, #1b1914);
+  --rail:        light-dark(#edeade, #171510);
+  --sunk:        light-dark(#e7e3d5, #221f18);
+  --ink:         light-dark(#1c1a15, #ece7d8);
+  --ink-soft:    light-dark(#625e56, #9c968a);
+  --ink-faint:   light-dark(#918c83, #6e6960);
+  --rule:        light-dark(#ddd8c8, #302c24);
+  --rule-strong: light-dark(#c6c0ae, #464136);
+  --accent:      light-dark(#8c3521, #d97a5c);
+  --accent-wash: light-dark(#f7eae3, #2b1d17);
+  --waiting:     light-dark(#7d6119, #cfa74d);
+  --unread:      light-dark(#1c1a15, #ece7d8);
+  /* Text on the accent fill: the accent is dark on paper and light on ink, so
+     the label has to flip with it or the one irreversible button loses contrast. */
+  --on-accent:   light-dark(#fdfcf8, #14130e);
+  --ink-solid: #1c1a15;
+  --on-ink: #f7f4ea;
+
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --rail-w: 16.25rem;
+  --list-w: 28.5rem;
+}
+
+/* The switcher. Absent the attribute the OS decides; setting it pins the choice. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* The selected-state pair, flipped by the same switch as everything else but
+   without light-dark() in the middle of it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --ink-solid: #ece7d8; --on-ink: #14130e; }
+}
+:root[data-theme="dark"] { --ink-solid: #ece7d8; --on-ink: #14130e; }
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  /* Weight never varies. Hierarchy is size, colour and the space above. */
+  font-weight: 500;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, strong, b { font-weight: 500; }
+h1 { margin: 0; font-family: var(--serif); font-size: 1.5rem; letter-spacing: -0.02em; line-height: 1.25; }
+h2 { margin: 0; font-size: 1rem; }
+
+button {
+  font: inherit; font-weight: 500; color: inherit;
+  background: none; border: 1px solid var(--rule-strong);
+  border-radius: 3px; padding: 0.35rem 0.7rem; min-height: 32px; cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--sunk); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+button.quiet { border-color: transparent; color: var(--ink-soft); }
+button.quiet:hover:not(:disabled) { color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+textarea, input {
+  font: inherit; font-weight: 500; color: var(--ink);
+  background: var(--pane); border: 1px solid var(--rule-strong);
+  border-radius: 3px; padding: 0.5rem 0.6rem;
+}
+
+.meta {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.02em;
+  color: var(--ink-soft); font-variant-numeric: tabular-nums;
+}
+
+/* ---------- three panes ---------- */
+
+.client {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(15rem, var(--list-w)) minmax(0, 1fr);
+  grid-template-rows: 100%;
+  height: 100%;
+}
+
+.rail {
+  min-width: 0;
+  background: var(--rail);
+  border-right: 1px solid var(--rule);
+  padding: 1.5rem 1.25rem 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.rail .brand { padding: 0 0.25rem 1.75rem; }
+.rail .brand .name {
+  display: block;
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.rail .brand .name em { font-style: normal; color: var(--accent); }
+.rail .brand .who {
+  display: block; margin-top: 0.4rem;
+  font-family: var(--mono); font-size: 0.64rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);
+}
+
+.rail .section {
+  margin: 1.5rem 0 0.35rem; padding: 0 0.7rem;
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);
+}
+
+.fld {
+  display: flex; align-items: center; gap: 0.7rem; width: 100%;
+  padding: 0.6rem 0.7rem; min-height: 42px; margin-bottom: 0.15rem;
+  border: 0; border-radius: 8px; background: none; text-align: left;
+  font-size: 0.9375rem; color: var(--ink-soft); cursor: pointer;
+  /* A folder name is a label, not a paragraph. "Not looked at" wrapping onto
+     three lines turns the rail into a column of stacked fragments. */
+  white-space: nowrap;
+  overflow: hidden;
+}
+.fld:not([aria-current="true"]):hover { background: var(--sunk); color: var(--ink); }
+/* Solid, not tinted — the reference gets its confidence from this one decision.
+   Fallbacks are deliberate: if the token ever fails to resolve, the pair must
+   still land together. A dark fill with light text is right; a missing fill
+   with light text is an invisible label. */
+.fld[aria-current="true"],
+.fld[aria-current="true"]:hover {
+  background: var(--ink-solid, #1c1a15);
+  color: var(--on-ink, #f7f4ea);
+}
+.fld[aria-current="true"] .n { color: var(--on-ink, #f7f4ea); opacity: 0.65; }
+.fld svg { flex: 0 0 auto; opacity: 0.75; }
+.fld[aria-current="true"] svg { opacity: 1; }
+.fld .n {
+  margin-left: auto; font-family: var(--mono); font-size: 0.7rem;
+  color: var(--ink-faint); font-variant-numeric: tabular-nums;
+}
+
+.rail .foot {
+  margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--rule);
+  display: flex; align-items: center; gap: 0.6rem;
+  color: var(--ink-faint); font-size: 0.8125rem;
+}
+.rail .foot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- list ---------- */
+
+.list {
+  border-right: 1px solid var(--rule);
+  overflow-x: hidden; overflow-y: auto;
+  min-width: 0; background: var(--pane);
+}
+.list-head {
+  position: sticky; top: 0; z-index: 2; background: var(--pane);
+  padding: 1.5rem 1.25rem 0.9rem; border-bottom: 1px solid var(--rule);
+}
+.list-head h1 { font-size: 1.6rem; letter-spacing: -0.025em; }
+.list-head .sub { margin: 0.3rem 0 0; color: var(--ink-soft); font-size: 0.9375rem; }
+
+.search {
+  width: 100%; margin-top: 1rem; padding: 0.7rem 0.9rem;
+  border: 1px solid var(--rule-strong); border-radius: 10px;
+  background: var(--paper); font-size: 0.9375rem; min-height: 46px;
+}
+.search::placeholder { color: var(--ink-faint); }
+
+.segs { display: flex; gap: 0.25rem; margin-top: 0.85rem; }
+.segs button {
+  border: 0; border-radius: 999px; background: none;
+  padding: 0.35rem 0.85rem; min-height: 32px;
+  font-size: 0.875rem; color: var(--ink-soft);
+}
+.segs button:not([aria-pressed="true"]):hover { background: var(--sunk); color: var(--ink); }
+.segs button[aria-pressed="true"],
+.segs button[aria-pressed="true"]:hover {
+  background: var(--ink-solid, #1c1a15);
+  color: var(--on-ink, #f7f4ea);
+}
+
+/* Dense mail rows: sender, subject, preview, age. Two lines, no more. */
+.mailrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.1rem 0.6rem;
+  width: 100%; max-width: 100%; text-align: left; cursor: pointer;
+  padding: 0.7rem 1.25rem 0.75rem 1.15rem;
+  border: 0; border-bottom: 1px solid var(--rule); border-radius: 0;
+  background: none; min-height: 44px; position: relative;
+}
+.mailrow:hover { background: var(--sunk); }
+.mailrow[aria-selected="true"] { background: var(--accent-wash); }
+.mailrow[aria-selected="true"]::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 2px; background: var(--accent);
+}
+.mailrow > * { min-width: 0; }
+.mailrow .who { min-width: 0; font-size: 0.9375rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailrow .when { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.mailrow .subj {
+  grid-column: 1 / -1; font-size: 0.9375rem; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mailrow .prev {
+  grid-column: 1 / -1; font-size: 0.875rem; color: var(--ink-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mailrow[data-unread="true"] .who,
+.mailrow[data-unread="true"] .subj { color: var(--unread); }
+.mailrow .flags { display: inline-flex; gap: 0.3rem; align-items: center; margin-right: 0.35rem; }
+.pip {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rule-strong); vertical-align: middle;
+}
+.pip[data-kind="needs_reply"] { background: var(--accent); }
+.pip[data-kind="waiting_on_them"] { background: var(--waiting); }
+.pip[data-kind="draft"] { background: var(--accent); box-shadow: 0 0 0 2px var(--accent-wash), 0 0 0 3px var(--accent); }
+
+/* ---------- reader ---------- */
+
+.reader { overflow-x: hidden; overflow-y: auto; min-width: 0; background: var(--paper); }
+.reader-inner { max-width: 46rem; margin: 0 auto; padding: 2rem 2.25rem 6rem; }
+
+.rhead { border-bottom: 1px solid var(--rule); padding-bottom: 0.9rem; margin-bottom: 1.25rem; }
+.rhead .meta { margin-top: 0.4rem; }
+
+.msg { border-left: 2px solid var(--rule-strong); padding-left: 1.1rem; margin-bottom: 1.5rem; }
+/* Direction readable before a word is: solid rule for what you sent. */
+.msg[data-direction="outbound"] { border-left-color: var(--ink-soft); }
+.msg header { display: flex; align-items: baseline; gap: 0.55rem; margin-bottom: 0.45rem; flex-wrap: wrap; }
+.msg header .from { font-size: 0.875rem; min-width: 0; overflow-wrap: anywhere; }
+.msg header .addr { min-width: 0; overflow-wrap: anywhere; }
+.rhead h1 { overflow-wrap: anywhere; }
+.msg header .at { margin-left: auto; white-space: nowrap; }
+
+.prose {
+  font-family: var(--serif); font-size: 1.0625rem; line-height: 1.6;
+  white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); margin: 0;
+}
+.sig { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--rule); color: var(--ink-faint); }
+
+/* The collapsed history. A two-word reply should not arrive under forty lines
+   of its own ancestry. */
+.quotetoggle {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  margin-top: 0.6rem; padding: 0.1rem 0.45rem; min-height: 22px;
+  font-family: var(--mono); font-size: 0.7rem; color: var(--ink-faint);
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--sunk);
+}
+.quotetoggle:hover { color: var(--ink); }
+.quoted {
+  margin-top: 0.6rem; padding-left: 0.9rem;
+  border-left: 2px solid var(--rule);
+  font-family: var(--serif); font-size: 0.95rem; line-height: 1.55;
+  color: var(--ink-faint); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* ---------- draft, in the reading pane where a reply belongs ---------- */
+
+.reply { border-top: 1px solid var(--rule-strong); margin-top: 2rem; padding-top: 1.25rem; }
+.reply-head { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
+
+/* The agent's reasoning, kept adjacent to the draft and visually annotational
+   rather than authoritative — it is a note in the margin, not a verdict. */
+.why {
+  font-family: var(--mono); font-size: 0.72rem; line-height: 1.55;
+  color: var(--ink-soft); background: var(--sunk);
+  border-left: 2px solid var(--accent); border-radius: 0 3px 3px 0;
+  padding: 0.6rem 0.75rem; margin-bottom: 0.7rem;
+}
+.why h3 { font-size: 0.7rem; color: var(--ink-faint); margin: 0 0 0.3rem; letter-spacing: 0.04em; }
+.why .rule { display: block; margin-top: 0.35rem; color: var(--ink-faint); }
+
+.draft-body {
+  width: 100%; min-height: 11rem; resize: vertical;
+  font-family: var(--serif); font-size: 1.0625rem; line-height: 1.6;
+}
+.actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.8rem; flex-wrap: wrap; }
+.actions .sp { flex: 1; }
+
+.notice { border-left: 2px solid var(--rule-strong); padding: 0.5rem 0 0.5rem 0.85rem; color: var(--ink-soft); font-size: 0.8125rem; }
+.notice[data-tone="error"] { border-left-color: var(--accent); color: var(--ink); }
+.empty {
+  padding: 4rem 2rem; color: var(--ink-soft);
+  max-width: 32rem; margin: 0 auto; text-align: center;
+}
+.empty h2 { font-family: var(--serif); font-size: 1.25rem; color: var(--ink); margin-bottom: 0.5rem; }
+.empty p { margin: 0 0 0.5rem; line-height: 1.6; }
+.empty .actions { justify-content: center; margin-top: 1.25rem; }
+
+.skeleton { background: var(--sunk); border-radius: 2px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
+
+kbd {
+  font-family: var(--mono); font-size: 0.68rem; border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px; border-radius: 3px; padding: 0.02rem 0.28rem; color: var(--ink-soft);
+}
+
+.progress { height: 2px; background: var(--rule); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); transition: width 600ms ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ---------- narrow: one pane at a time ---------- */
+
+@media (max-width: 1180px) { :root { --rail-w: 13rem; --list-w: 20rem; } }
+
+@media (max-width: 860px) {
+  html, body { overflow: auto; }
+  .client { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.6rem; }
+  .rail .brand { width: 100%; padding-bottom: 0.5rem; }
+  .rail .section { display: none; }
+  .fld { width: auto; }
+  /* One pane at a time: the list, or the thread you opened from it. */
+  .client[data-view="reader"] .list { display: none; }
+  .client[data-view="list"] .reader { display: none; }
+  .list, .reader { border-right: 0; }
+  .reader-inner { padding: 1rem 1rem 4rem; }
+  .msg header { display: block; }
+  .msg header .at { display: block; margin-left: 0; }
+  .msg header .addr { display: none; }
+  .keys { display: none; }
+}
+
+/* ---------- settings screens: mailbox + rules ----------
+ *
+ * These live inside the reader pane rather than in a pane of their own. The
+ * styles below were orphaned when the shell was rebuilt for three panes — the
+ * markup kept its class names while styles.css was rewritten around them, so
+ * the step list fell back to browser <ol> defaults and every stat ran into its
+ * own label. Anything the settings screens use is defined here.
+ */
+
+.column, .narrow { max-width: 34rem; }
+.narrow { margin: 0 auto; }
+
+.group-head {
+  display: flex; align-items: baseline; gap: 0.55rem;
+  margin: 2rem 0 0.25rem; padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+.group-head h2 {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--ink);
+}
+.group-head .count { font-size: 0.7rem; color: var(--ink-faint); }
+.group-head .count::before { content: "(" }
+.group-head .count::after { content: ")" }
+
+/* Onboarding steps. A bare <ol> renders "1. 1 · mailbox"; the marker has to go. */
+.steps { display: flex; gap: 0.5rem; margin: 0 0 2rem; padding: 0; list-style: none; }
+.steps li {
+  list-style: none; flex: 1;
+  border-top: 2px solid var(--rule); padding-top: 0.4rem;
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+.steps li[data-state="current"] { border-top-color: var(--accent); color: var(--ink); }
+.steps li[data-state="done"] { border-top-color: var(--rule-strong); color: var(--ink-soft); }
+
+.choice {
+  display: block; width: 100%; text-align: left;
+  border: 1px solid var(--rule-strong); border-radius: 3px;
+  padding: 0.8rem 0.95rem; margin-bottom: 0.6rem;
+  background: var(--pane); min-height: 44px;
+}
+.choice[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-wash); }
+.choice .why {
+  display: block; margin: 0.2rem 0 0; padding: 0; border: 0; background: none;
+  color: var(--ink-soft); font-family: var(--sans); font-size: 0.8125rem;
+}
+
+/* The wait, made useful: real findings counting up rather than a spinner. */
+.findings {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 1.25rem; margin: 1.5rem 0;
+}
+.finding .n {
+  display: block; font-family: var(--mono); font-size: 1.5rem;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.15;
+}
+.finding .label { display: block; margin-top: 0.15rem; font-size: 0.8125rem; color: var(--ink-soft); }
+
+.ticker { border-top: 1px solid var(--rule); margin: 1rem 0 0; padding: 0.6rem 0 0; list-style: none; }
+.ticker li {
+  list-style: none; font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.1rem 0;
+}
+
+.draft-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.85rem; flex-wrap: wrap; }
+.draft-actions .spacer { flex: 1 }
+
+.rule-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: start;
+  padding: 0.7rem 0; border-bottom: 1px solid var(--rule);
+}
+.rule-row .text { font-size: 0.9375rem; }
+.rule-row .provenance { margin-top: 0.2rem; color: var(--ink-soft); font-size: 0.8125rem; }
+.rule-row .receipts {
+  font-family: var(--mono); font-size: 0.7rem; color: var(--ink-faint); white-space: nowrap;
+}
+
+.budget { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.25rem; }
+.budget .bar { flex: 1; height: 2px; background: var(--rule); }
+.budget .bar i { display: block; height: 100%; background: var(--ink-soft); }
+.budget .bar[data-over="true"] i { background: var(--accent); }
+
+@media (max-width: 860px) {
+  .findings { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.9rem; }
+  .steps { gap: 0.3rem; }
+}
+
+/* ---------- theme switcher ---------- */
+
+.themer { display: flex; gap: 0.2rem; margin-top: 1.5rem; padding: 0 0.5rem; }
+.themer button {
+  flex: 1; min-height: 28px; padding: 0.2rem 0.3rem;
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.03em;
+  border-color: var(--rule); color: var(--ink-faint); border-radius: 2px;
+}
+.themer button[aria-pressed="true"] {
+  background: var(--sunk); border-color: var(--rule-strong); color: var(--ink);
+}
+
+/* ---------- the paper, on screen ---------- */
+
+.papersec { margin-bottom: 1.75rem; }
+.paperitem { display: flex; gap: 0.75rem; padding: 0.5rem 0; }
+/* The same number the PDF prints, so "reply 3" means one thing everywhere. */
+.paperitem .ord {
+  flex: 0 0 1.4rem; text-align: right; padding-top: 0.1rem;
+  font-family: var(--mono); font-size: 0.8rem; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.paperitem .body { flex: 1; min-width: 0; }
+.paperitem .h { display: block; font-family: var(--serif); font-size: 1rem; }
+.paperitem .d { display: block; margin-top: 0.15rem; color: var(--ink-soft); font-size: 0.875rem; }
+.paperitem .a {
+  display: block; margin-top: 0.2rem;
+  font-family: var(--mono); font-size: 0.68rem; color: var(--ink-faint);
+}
+.pdflink {
+  display: inline-flex; align-items: center; min-height: 32px;
+  padding: 0.35rem 0.7rem; border: 1px solid var(--rule-strong); border-radius: 3px;
+  text-decoration: none; color: var(--ink); font-size: 0.875rem;
+}
+.pdflink:hover { background: var(--sunk); }

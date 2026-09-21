@@ -1,0 +1,46 @@
+{
+  "files": [
+    {
+      "description": null,
+      "path": "/memory/AGENTS.md",
+      "search_enabled": true,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/memory/agents/ledger/AGENTS.md",
+      "search_enabled": true,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/memory/conventions.md",
+      "search_enabled": true,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/memory/agents/ledger/direction.md",
+      "search_enabled": true,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/memory/newspaper-template.html",
+      "search_enabled": false,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/memory/pod-map.md",
+      "search_enabled": true,
+      "visibility": "POD"
+    },
+    {
+      "description": null,
+      "path": "/memory/agents/ledger/runs.md",
+      "search_enabled": true,
+      "visibility": "POD"
+    }
+  ]
+}
