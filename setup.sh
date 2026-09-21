@@ -93,8 +93,10 @@ try:
 except Exception: print("none")
 ')"
 if [ "$GMAIL" = "connected" ]; then
-  STEP="  A mail account is already connected to this organization. Run ./wire-gmail.sh"
-  STEP2="  to register it here, then they say the word and you sync."
+  # A command has no business in the message a person reads. What they get is a
+  # question; the command that answers it is in the frame above, for the agent.
+  STEP="  A mailbox is already connected here, so there is nothing for you to set up."
+  STEP2="  Say the word and she starts reading it."
 else
   STEP="  Connect a mailbox — nothing works until you do:"
   STEP2="  $(lemma connectors connect-requests create gmail --output json 2>/dev/null \
@@ -113,6 +115,8 @@ cat <<TXT
   gmail: $GMAIL · log: $LOG)
 
  When they answer, YOU do the thing — never hand them a command:
+   gmail already connected   -> ./wire-gmail.sh registers it as this pod's mailbox.
+                                It reads nothing; the sync is a separate yes.
    they want their mail read -> ./wire-gmail.sh, then gmail_sync. Read
                                 /memory/conventions.md first: tier='corpus' is
                                 real correspondence, index_only is bulk mail and
